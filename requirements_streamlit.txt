@@ -1,0 +1,19 @@
+# Requirements for Streamlit Ensemble App
+
+# Core ML libraries
+tensorflow>=2.12.0
+numpy>=1.23.0
+scikit-learn>=1.3.0
+xgboost>=2.0.0
+
+# Audio processing
+librosa>=0.10.0
+soundfile>=0.12.0
+
+# Streamlit and visualization
+streamlit>=1.28.0
+plotly>=5.17.0
+pandas>=2.0.0
+
+# Utilities
+Pillow>=10.0.0
