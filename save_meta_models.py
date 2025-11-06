@@ -65,16 +65,23 @@ def load_and_prepare_data():
     X_accomp = np.array(mfccs_accomp)
     y = np.array(labels)
     
-    # Prepare for LSTM
+    # Prepare for LSTM: (samples, 132, 40) - (batch, time_steps, features)
     if X_vocal.shape[1:] == (130, 13):
-        X_vocal = X_vocal[:, :40, :]
+        X_vocal = X_vocal[:, :40, :]  # Take first 40 coefficients
         X_vocal = np.pad(X_vocal, ((0, 0), (0, 0), (0, 132 - X_vocal.shape[2])), mode='constant')
+        # Transpose to (samples, time_steps, features)
+        X_vocal = np.transpose(X_vocal, (0, 2, 1))  # (samples, 132, 40)
+    elif X_vocal.shape[1:] == (40, 132):
+        # Already correct shape, just transpose
+        X_vocal = np.transpose(X_vocal, (0, 2, 1))  # (samples, 132, 40)
     
-    # Prepare for CNN
+    # Prepare for CNN: (samples, 40, 132, 1)
     if X_accomp.shape[1:] == (130, 13):
-        X_accomp = X_accomp[:, :40, :]
+        X_accomp = X_accomp[:, :40, :]  # Take first 40 coefficients
         X_accomp = np.pad(X_accomp, ((0, 0), (0, 0), (0, 132 - X_accomp.shape[2])), mode='constant')
-    X_accomp = X_accomp[..., np.newaxis]
+        # Transpose to (samples, 40, 132)
+        X_accomp = np.transpose(X_accomp, (0, 1, 2))  # Keep as is
+    X_accomp = X_accomp[..., np.newaxis]  # Add channel dimension
     
     # Encode labels
     label_encoder = LabelEncoder()

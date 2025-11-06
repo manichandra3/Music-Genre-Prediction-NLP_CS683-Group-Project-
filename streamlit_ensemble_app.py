@@ -142,25 +142,58 @@ def extract_mfcc(audio_path, n_mfcc=40, target_length=132):
         st.error(f"Error extracting features: {str(e)}")
         return None
 
-def prepare_features_for_models(mfcc):
+def prepare_features_for_models(mfcc, lstm_model=None):
     """
     Prepare MFCC features for LSTM and CNN models
+    Auto-detects the expected input shape of the LSTM model
     
     Args:
         mfcc: MFCC features of shape (n_mfcc, n_frames)
+        lstm_model: LSTM model (used to detect expected input shape)
     
     Returns:
         tuple: (lstm_input, cnn_input)
     """
-    # For LSTM: (1, 40, 132)
-    lstm_input = mfcc.T  # Transpose to (n_frames, n_mfcc)
-    lstm_input = lstm_input[:N_FRAMES, :N_MFCC]  # Ensure correct shape
-    lstm_input = np.expand_dims(lstm_input, axis=0)  # Add batch dimension
+    # Ensure we have the right dimensions
+    if mfcc.shape[0] > N_MFCC:
+        mfcc = mfcc[:N_MFCC, :]
+    if mfcc.shape[1] > N_FRAMES:
+        mfcc = mfcc[:, :N_FRAMES]
     
-    # For CNN: (1, 40, 132, 1)
-    cnn_input = mfcc[:N_MFCC, :N_FRAMES]  # (40, 132)
-    cnn_input = np.expand_dims(cnn_input, axis=-1)  # Add channel dimension
-    cnn_input = np.expand_dims(cnn_input, axis=0)  # Add batch dimension
+    # Pad if necessary
+    if mfcc.shape[0] < N_MFCC:
+        pad_width = ((0, N_MFCC - mfcc.shape[0]), (0, 0))
+        mfcc = np.pad(mfcc, pad_width, mode='constant')
+    if mfcc.shape[1] < N_FRAMES:
+        pad_width = ((0, 0), (0, N_FRAMES - mfcc.shape[1]))
+        mfcc = np.pad(mfcc, pad_width, mode='constant')
+    
+    # Detect LSTM expected input shape
+    lstm_expects_new_format = True  # Default to new format (132, 40)
+    if lstm_model is not None:
+        try:
+            expected_shape = lstm_model.input_shape[1:]  # Get shape without batch dimension
+            if expected_shape == (40, 132):
+                lstm_expects_new_format = False  # Old format
+                st.warning("⚠️ Using OLD model format (40, 132). Please retrain models for better performance. See DOWNLOAD_DATA.md")
+            elif expected_shape == (132, 40):
+                lstm_expects_new_format = True  # New format
+        except:
+            pass
+    
+    # Prepare LSTM input based on detected format
+    if lstm_expects_new_format:
+        # New format: (1, 132, 40) - (batch, time_steps, features)
+        lstm_input = mfcc.T  # Transpose to (132, 40)
+        lstm_input = np.expand_dims(lstm_input, axis=0)  # Add batch dimension -> (1, 132, 40)
+    else:
+        # Old format: (1, 40, 132) - (batch, features, time_steps)
+        lstm_input = np.expand_dims(mfcc, axis=0)  # Just add batch dimension -> (1, 40, 132)
+    
+    # For CNN: (1, 40, 132, 1) - (batch, height, width, channels)
+    cnn_input = mfcc  # (40, 132)
+    cnn_input = np.expand_dims(cnn_input, axis=-1)  # Add channel dimension -> (40, 132, 1)
+    cnn_input = np.expand_dims(cnn_input, axis=0)  # Add batch dimension -> (1, 40, 132, 1)
     
     return lstm_input, cnn_input
 
@@ -415,8 +448,14 @@ def main():
                             progress_bar.progress(50)
                             st.text("Preparing model inputs...")
                             
-                            # Prepare inputs
-                            lstm_input, cnn_input = prepare_features_for_models(mfcc)
+                            # Prepare inputs (pass lstm model to auto-detect expected format)
+                            lstm_input, cnn_input = prepare_features_for_models(mfcc, models.get('lstm'))
+                            
+                            # Debug: Show input shapes
+                            with st.expander("🔍 Debug Info (click to expand)"):
+                                st.text(f"MFCC shape: {mfcc.shape}")
+                                st.text(f"LSTM input shape: {lstm_input.shape} (expected: (1, 132, 40))")
+                                st.text(f"CNN input shape: {cnn_input.shape} (expected: (1, 40, 132, 1))")
                             
                             progress_bar.progress(75)
                             st.text("Making predictions...")
