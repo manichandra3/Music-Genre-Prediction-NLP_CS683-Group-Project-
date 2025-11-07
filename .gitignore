@@ -105,7 +105,6 @@ Data/images_original/
 
 # Large dataset files
 *.csv
-*.json
 Data/features_3_sec.csv
 Data/features_30_sec.csv
 Data/data.json
@@ -113,8 +112,6 @@ Data/accompaniment_mfcc.json
 
 # Presentation files
 *.key
-*.ppt
-*.pptx
 
 # Logs and temporary files
 *.log
