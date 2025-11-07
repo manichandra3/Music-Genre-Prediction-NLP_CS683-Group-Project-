@@ -86,13 +86,13 @@ venv.bak/
 ._*
 
 # Model files (large binary files)
-*.h5
-*.keras
-*.pkl
-*.joblib
-*.pt
-*.pth
-*.ckpt
+# *.h5
+# *.keras
+# *.pkl
+# *.joblib
+# *.pt
+# *.pth
+# *.ckpt
 
 # Data files (audio and images - typically large)
 Data/genres_original/
